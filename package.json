@@ -1,0 +1,24 @@
+{
+  "name": "aurora-ai-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aurora AI 本地移动应用：安卓、iOS 与 PWA 共用前端",
+  "scripts": {
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios",
+    "build:android": "npm run sync && cd android && ./gradlew assembleDebug",
+    "check": "node scripts/check-project.mjs",
+    "icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/core": "8.5.0",
+    "@capacitor/ios": "8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "8.5.0",
+    "sharp": "^0.35.3"
+  }
+}

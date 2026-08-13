@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1915" />
+    <meta name="description" content="隐私优先、本地存储，支持 GPT、Claude、Gemini 与自定义中转站的多模型 AI 工作台。" />
+    <meta property="og:title" content="Aurora AI — 你的本地 AI 工作台" />
+    <meta property="og:description" content="密钥、对话与作品只留在你的设备。" />
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>Aurora AI — 你的本地 AI 工作台</title>
+    <script src="./native-adapter.js"></script>
+    <script type="module" crossorigin src="./native-bootstrap.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B_yWcLSP.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(function () {});
+      }
+    </script>
+  </body>
+</html>

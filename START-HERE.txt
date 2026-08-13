@@ -1,0 +1,84 @@
+# Aurora AI 手机本地版
+
+这不是简单网页套壳。安卓和签名后的 iOS 原生版本会直接使用手机系统网络请求 AI 接口，不经过 GitHub，不经过 Cloudflare，也不受浏览器 CORS 跨域限制。
+
+## 已经预设好的内容
+
+- GPT API 地址：`https://tokenclub.info`
+- 中转站 API 地址：`https://tokenclub.info`
+- 默认模型：`gpt-5.6-sol`
+- TokenClub 协议：应用内部自动把 Chat Completions 转成 Responses
+- 数据保存：密钥、配置和聊天记录保存在应用本地
+- 日志安全：不会输出 API 密钥和聊天正文
+
+安装后只需要：
+
+1. 打开 Aurora AI。
+2. 选择 GPT。
+3. 在“API 密钥”中粘贴 TokenClub 密钥。
+4. 确认模型是 `gpt-5.6-sol`。
+5. 点击“保存并使用 GPT”。
+6. 开始聊天。
+
+## 安卓：获得一键安装 APK
+
+第一次生成 APK：
+
+1. 把本项目全部上传到一个 GitHub 仓库。
+2. 打开仓库顶部的 `Actions`。
+3. 左边点击“**一键构建安卓 APK**”。
+4. 点击右边的 `Run workflow`。
+5. 等待绿色对勾出现。
+6. 打开刚完成的运行记录。
+7. 在页面底部下载 `Aurora-AI-Android-APK`。
+8. 解压后得到 `Aurora-AI-Android.apk`。
+9. 把 APK 发到安卓手机，点击安装。
+
+手机第一次安装时，如果提示“不允许安装未知应用”，按照系统提示允许当前浏览器或文件管理器安装即可。
+
+以后每次改代码并上传，GitHub 会自动重新构建 APK。
+
+## iPhone：苹果的客观限制
+
+iOS 源码和未签名 IPA 已包含在项目里，但苹果不允许像安卓一样永久安装任意 IPA。
+
+零成本方式：
+
+1. 在 GitHub `Actions` 运行“**构建 iOS 未签名 IPA**”。
+2. 下载 `Aurora-AI-iOS-unsigned`。
+3. 使用自己的 Apple ID，通过 AltStore、SideStore、Sideloadly 或 Xcode 签名安装。
+4. 免费 Apple ID 的签名通常需要每 7 天续签一次。
+
+永久一键安装方式需要 Apple Developer Program 和正式签名，无法做到完全零成本。
+
+## iPhone 免费备用：PWA
+
+`www` 文件夹仍然是完整 PWA。把它更新到原 GitHub Pages 后：
+
+1. 用 Safari 打开网页。
+2. 点击“分享”。
+3. 点击“添加到主屏幕”。
+
+PWA 可以缓存界面并离线启动，但因为它仍运行在浏览器中，TokenClub 如果没有允许跨域，PWA 仍需把 API 地址改成你的 Cloudflare Worker。只有签名后的 iOS 原生版可以完全绕开跨域。
+
+## 换中转站
+
+在应用设置中直接修改“API 地址”和“模型名称”即可。
+
+如果新中转站使用标准 Chat Completions：直接填写它给出的 `/v1` 地址。
+
+如果仍使用 TokenClub：可以填写以下任意一种，应用都会自动识别：
+
+```text
+https://tokenclub.info
+https://tokenclub.info/v1
+https://tokenclub.info/responses
+```
+
+## 重要安全提醒
+
+- 不要把真实 API 密钥写进源码或上传到 GitHub。
+- 密钥只在安装后的应用设置中填写。
+- 不要把 APK 改成内置公共密钥后发给别人使用。
+- 如果手机丢失，应立即前往中转站后台删除旧密钥并创建新密钥。
+
