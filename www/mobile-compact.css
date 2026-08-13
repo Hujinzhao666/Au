@@ -1,0 +1,458 @@
+/* ========================================================================
+   Aurora AI 手机紧凑模式
+   缩小过大的标题和留白，同时把真正需要点击的按钮放大到 40–44px。
+   ======================================================================== */
+@media (width <= 760px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-size: 14px;
+    overscroll-behavior: none;
+  }
+
+  .workspace {
+    height: 100dvh;
+  }
+
+  /* 顶栏：整体更薄，但菜单、设置按钮更容易点中。 */
+  .topbar {
+    flex: 0 0 calc(52px + env(safe-area-inset-top));
+    min-height: calc(52px + env(safe-area-inset-top));
+    height: auto;
+    padding: env(safe-area-inset-top) 8px 0;
+    gap: 4px;
+  }
+
+  .topbar .icon-btn,
+  .settings-head .icon-btn,
+  .brand-row .icon-btn {
+    display: grid;
+    place-items: center;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  .model-switch {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .model-switch select {
+    max-width: min(42vw, 165px);
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .provider-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* 欢迎页：减少大标题、顶部空白和卡片高度。 */
+  .welcome {
+    width: min(94%, 620px);
+    padding: clamp(22px, 5vh, 42px) 0 158px;
+  }
+
+  .welcome-orb {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 12px;
+  }
+
+  .welcome-orb span {
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+  }
+
+  .welcome h1 {
+    margin: 7px 0;
+    font-size: clamp(24px, 7vw, 28px);
+    line-height: 1.2;
+    letter-spacing: -0.7px;
+  }
+
+  .welcome > p {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .starter-grid {
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .starter-grid button {
+    min-height: 56px;
+    padding: 9px 11px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .starter-icon {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+  }
+
+  .starter-grid strong {
+    font-size: 13px;
+  }
+
+  .starter-grid small {
+    max-width: calc(100vw - 105px);
+    font-size: 10px;
+  }
+
+  .local-proof {
+    margin-top: 14px;
+    font-size: 9px;
+  }
+
+  /* 对话区：内容更宽，头像和无效空白更小。 */
+  .messages {
+    width: 94%;
+    padding: 18px 0 158px;
+  }
+
+  .conversation-title {
+    padding: 0 0 16px 40px;
+  }
+
+  .conversation-title h2 {
+    font-size: 21px;
+  }
+
+  .message,
+  .message.user {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 9px;
+    padding: 18px 0;
+  }
+
+  .avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .message-meta {
+    height: 24px;
+  }
+
+  .message-meta strong {
+    font-size: 12px;
+  }
+
+  .rich-text {
+    font-size: 14px;
+    line-height: 1.72;
+  }
+
+  .rich-text h2 {
+    font-size: 20px;
+  }
+
+  .rich-text h3 {
+    font-size: 17px;
+  }
+
+  .message-tools button,
+  .message-tools a {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-grid;
+    place-items: center;
+    font-size: 11px;
+  }
+
+  /* 输入区：不再占太高，但所有操作键都有足够大的点击区域。 */
+  .composer-wrap {
+    width: calc(100% - 12px);
+    bottom: calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .mode-tabs {
+    max-width: 100%;
+    margin-bottom: 4px;
+    padding: 3px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .mode-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mode-tabs button {
+    min-height: 38px;
+    padding: 7px 12px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .composer {
+    border-radius: 13px;
+    padding: 9px 9px 7px;
+  }
+
+  .composer textarea {
+    min-height: 40px;
+    max-height: 32dvh;
+    padding: 2px 3px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .composer-tools button {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    padding: 8px;
+    font-size: 15px;
+  }
+
+  .composer-tools .send-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 19px;
+  }
+
+  /* 左侧历史抽屉。 */
+  .left-sidebar {
+    width: min(86vw, 310px);
+    padding: calc(12px + env(safe-area-inset-top)) 12px
+      calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .brand-row {
+    padding: 0 2px 12px;
+  }
+
+  .new-chat {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .search-box {
+    min-height: 44px;
+    margin-top: 7px;
+  }
+
+  .search-box input {
+    font-size: 16px;
+  }
+
+  .history-head {
+    padding-top: 12px;
+    font-size: 11px;
+  }
+
+  .thread-item {
+    min-height: 54px;
+  }
+
+  .thread-item strong {
+    font-size: 13px;
+  }
+
+  .thread-item small {
+    font-size: 10px;
+  }
+
+  .thread-item button {
+    opacity: 1;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .side-footer > button {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  /* 设置抽屉：减少卡片占地，放大难以阅读和点击的项目。 */
+  .settings-panel {
+    width: min(94vw, 380px);
+    padding: calc(14px + env(safe-area-inset-top)) 13px
+      calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .settings-head h2 {
+    font-size: 21px;
+  }
+
+  .settings-head span {
+    font-size: 9px;
+  }
+
+  .security-note {
+    margin-top: 10px;
+    padding: 9px;
+  }
+
+  .security-note strong {
+    font-size: 12px;
+  }
+
+  .security-note p {
+    font-size: 10px;
+  }
+
+  .provider-pills {
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .provider-pills button {
+    min-height: 58px;
+    padding: 7px 2px;
+    font-size: 10px;
+  }
+
+  .config-card {
+    margin-top: 9px;
+    padding: 11px;
+  }
+
+  .config-title {
+    padding-bottom: 9px;
+  }
+
+  .config-title h3 {
+    font-size: 14px;
+  }
+
+  .config-title span,
+  .config-title em {
+    font-size: 10px;
+  }
+
+  .config-card label {
+    gap: 5px;
+    margin-top: 9px;
+    font-size: 12px;
+  }
+
+  .config-card input {
+    min-height: 44px;
+    padding: 9px 10px;
+    font-size: 16px;
+  }
+
+  .input-control input {
+    padding-right: 54px;
+  }
+
+  .input-control button {
+    min-width: 44px;
+    min-height: 38px;
+    right: 2px;
+    font-size: 11px;
+  }
+
+  .config-card details {
+    margin-top: 9px;
+    padding-top: 9px;
+  }
+
+  .config-card summary {
+    min-height: 38px;
+    align-items: center;
+    font-size: 12px;
+  }
+
+  .save-config {
+    min-height: 46px;
+    margin-top: 10px;
+    font-size: 14px;
+  }
+
+  .usage-card {
+    margin-top: 9px;
+    padding: 11px;
+  }
+
+  .usage-title {
+    font-size: 12px;
+  }
+
+  .usage-title button {
+    min-height: 38px;
+    padding: 0 7px;
+    font-size: 11px;
+  }
+
+  .balance small,
+  .balance span,
+  .usage-card > p,
+  .storage-card small,
+  .vault-foot {
+    font-size: 10px;
+  }
+
+  .balance strong {
+    font-size: 21px;
+  }
+
+  .spend-row,
+  .storage-card strong {
+    font-size: 11px;
+  }
+
+  .storage-card button {
+    min-height: 38px;
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  .toast {
+    top: calc(10px + env(safe-area-inset-top));
+    padding: 11px 14px;
+    font-size: 12px;
+  }
+}
+
+/* 窄屏手机再收紧一点，避免 360px 左右的屏幕拥挤。 */
+@media (width <= 390px) {
+  .topbar {
+    padding-inline: 5px;
+  }
+
+  .model-switch select {
+    max-width: 132px;
+  }
+
+  .welcome {
+    padding-top: 18px;
+  }
+
+  .welcome h1 {
+    font-size: 24px;
+  }
+
+  .provider-pills {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .provider-pills button {
+    font-size: 9px;
+  }
+
+  .mode-tabs button {
+    padding-inline: 10px;
+  }
+}
