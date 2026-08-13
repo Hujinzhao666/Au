@@ -1,0 +1,16 @@
+{
+	"appId": "com.auroraai.mobile",
+	"appName": "Aurora AI",
+	"webDir": "www",
+	"backgroundColor": "#f7f8f6",
+	"server": {
+		"androidScheme": "https",
+		"iosScheme": "capacitor"
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	},
+	"packageClassList": []
+}
