@@ -1,10 +1,23 @@
+/* ========================================================================
+ * 【作者固定公告】
+ * 这部分不接入管理员控制台，普通用户和本机管理员都不能在软件界面修改或隐藏。
+ * ======================================================================== */
+window.AURORA_PUBLIC_CONFIG = Object.freeze({
+  authorName: `李青玄`,
+  authorContactType: `QQ`,
+  authorContact: `7010476`,
+  authorNotice: `本软件无偿分享，如需定制软件请联系作者。`,
+  defaultNotice: ``,
+  defaultFeaturedRoleId: `starlight-keeper`,
+});
+
 /**
  * Aurora AI 原生直连适配器
  *
  * 作用：
  * 1. 安卓/iOS 原生应用使用 CapacitorHttp 发起请求，避开浏览器 CORS。
- * 2. 当目标是 tokenclub.info 时，把前端的 Chat Completions 请求转换为
- *    Responses 请求，再把上游结果转换回前端能够识别的格式。
+ * 2. 对官方 OpenAI 和任意 OpenAI 兼容地址，自适应尝试 Responses；
+ *    不支持时保留原 Chat Completions 请求，避免把中转站地址写死。
  * 3. 不保存、不打印 API 密钥和聊天内容。
  *
  * 网页/PWA 环境不会启用本适配器，仍可继续使用 Cloudflare Worker。
@@ -25,7 +38,7 @@
       capacitor && typeof capacitor.getPlatform === "function"
         ? capacitor.getPlatform()
         : "web",
-    adapterVersion: "1.3.0",
+    adapterVersion: "1.4.0",
   });
 
   window.AuroraNativeReady = isNative
@@ -43,7 +56,7 @@
   window.fetch = async function auroraFetch(input, init) {
     var requestUrl = getRequestUrl(input);
 
-    if (!shouldConvertTokenClubRequest(requestUrl, init)) {
+    if (!isOpenAIChatRequest(requestUrl, init)) {
       return nativeFetch(input, init);
     }
 
@@ -51,8 +64,12 @@
 
     try {
       var chatBody = readJsonBody(init && init.body);
+      if (!shouldUseResponsesConversion(requestUrl, chatBody)) {
+        return nativeFetch(input, init);
+      }
       var responsesBody = chatToResponses(chatBody);
-      var upstreamUrl = new URL("/responses", requestUrl).href;
+      var upstreamUrl = responsesUrlFor(requestUrl);
+      var providerHost = new URL(requestUrl).hostname.toLowerCase();
       var useBackground = ["high", "xhigh", "max"].includes(
         responsesBody.reasoning && responsesBody.reasoning.effort
       );
@@ -64,7 +81,7 @@
       });
 
       console.info("[AuroraNative] request_start", {
-        provider: "tokenclub",
+        provider: providerHost,
         model: responsesBody.model,
         stream: false,
       });
@@ -83,12 +100,23 @@
       var data = safeJson(text);
 
       if (
+        !response.ok &&
+        responsesEndpointUnavailable(response.status, data, text)
+      ) {
+        console.info("[AuroraNative] responses_fallback_to_chat", {
+          provider: providerHost,
+          status: response.status,
+        });
+        return nativeFetch(input, init);
+      }
+
+      if (
         useBackground &&
         !response.ok &&
         backgroundUnsupported(response.status, data, text)
       ) {
         console.info("[AuroraNative] background_fallback", {
-          provider: "tokenclub",
+          provider: providerHost,
           status: response.status,
         });
         response = await nativeFetch(
@@ -100,6 +128,13 @@
         text = await response.text();
         data = safeJson(text);
         backgroundActive = false;
+      }
+
+      if (
+        !response.ok &&
+        responsesEndpointUnavailable(response.status, data, text)
+      ) {
+        return nativeFetch(input, init);
       }
 
       if (
@@ -118,6 +153,13 @@
         );
         text = await response.text();
         data = safeJson(text);
+      }
+
+      if (
+        !response.ok &&
+        responsesEndpointUnavailable(response.status, data, text)
+      ) {
+        return nativeFetch(input, init);
       }
 
       if (
@@ -144,13 +186,20 @@
       }
 
       if (
+        !response.ok &&
+        responsesEndpointUnavailable(response.status, data, text)
+      ) {
+        return nativeFetch(input, init);
+      }
+
+      if (
         response.ok &&
         data &&
         data.id &&
         ["queued", "in_progress"].includes(data.status)
       ) {
         data = await pollBackgroundResponse(
-          requestUrl,
+          upstreamUrl,
           data.id,
           upstreamInit.headers
         );
@@ -158,7 +207,7 @@
       }
 
       console.info("[AuroraNative] request_end", {
-        provider: "tokenclub",
+        provider: providerHost,
         status: response.status,
         duration_ms: Date.now() - startedAt,
       });
@@ -199,7 +248,7 @@
     }
   };
 
-  function shouldConvertTokenClubRequest(url, init) {
+  function isOpenAIChatRequest(url, init) {
     if (
       !url ||
       !init ||
@@ -210,13 +259,44 @@
 
     try {
       var parsed = new URL(url);
+      return /\/chat\/completions\/?$/i.test(parsed.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function shouldUseResponsesConversion(url, chat) {
+    try {
+      var host = new URL(url).hostname.toLowerCase();
+      var effort = normalizeReasoningEffort(chat && chat.reasoning_effort);
       return (
-        parsed.hostname.toLowerCase() === "tokenclub.info" &&
-        /\/chat\/completions\/?$/i.test(parsed.pathname)
+        host === "tokenclub.info" ||
+        ["high", "xhigh", "max"].includes(effort) ||
+        hasResponseOnlyContent(chat && chat.messages)
       );
     } catch (_) {
       return false;
     }
+  }
+
+  function hasResponseOnlyContent(messages) {
+    return (Array.isArray(messages) ? messages : []).some(function (message) {
+      return Array.isArray(message && message.content)
+        ? message.content.some(function (part) {
+            return part && ["file", "input_file"].includes(part.type);
+          })
+        : false;
+    });
+  }
+
+  function responsesUrlFor(requestUrl) {
+    var parsed = new URL(requestUrl);
+    parsed.pathname = parsed.pathname.replace(
+      /\/chat\/completions\/?$/i,
+      "/responses"
+    );
+    parsed.search = "";
+    return parsed.href;
   }
 
   function getRequestUrl(input) {
@@ -245,14 +325,27 @@
   }
 
   function backgroundUnsupported(status, data, text) {
-    if (![400, 404, 405, 422].includes(Number(status))) return false;
+    if (![400, 422].includes(Number(status))) return false;
     var message = String(
       (data && data.error && data.error.message) ||
         (data && data.message) ||
         text ||
         ""
     ).toLowerCase();
-    return [404, 405].includes(Number(status)) || message.includes("background");
+    return message.includes("background");
+  }
+
+  function responsesEndpointUnavailable(status, data, text) {
+    var code = Number(status);
+    if (code === 405) return true;
+    if (code !== 404) return false;
+    var message = String(
+      (data && data.error && data.error.message) ||
+        (data && data.message) ||
+        text ||
+        ""
+    ).toLowerCase();
+    return !message.includes("model");
   }
 
   function unsupportedOption(data, text, optionName) {
@@ -265,11 +358,13 @@
     return message.includes(String(optionName).toLowerCase());
   }
 
-  async function pollBackgroundResponse(requestUrl, responseId, headers) {
-    var pollUrl = new URL(
-      "/responses/" + encodeURIComponent(responseId),
-      requestUrl
-    ).href;
+  async function pollBackgroundResponse(responsesUrl, responseId, headers) {
+    var parsedPollUrl = new URL(responsesUrl);
+    parsedPollUrl.pathname = parsedPollUrl.pathname.replace(
+      /\/responses\/?$/i,
+      "/responses/" + encodeURIComponent(responseId)
+    );
+    var pollUrl = parsedPollUrl.href;
     var deadline = Date.now() + 30 * 60 * 1000;
     var consecutiveFailures = 0;
 
