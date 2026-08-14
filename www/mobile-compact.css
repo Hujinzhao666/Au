@@ -456,3 +456,217 @@
     padding-inline: 10px;
   }
 }
+
+/* 项目工作流与本地记忆文件夹。 */
+.workflow-stages {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin: -2px auto 6px;
+}
+
+.workflow-stages button {
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 9px;
+}
+
+.workflow-stages button.active {
+  color: #fff;
+  border-color: var(--green-dark);
+  background: var(--green-dark);
+}
+
+.vault-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(8, 18, 13, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.vault-window {
+  width: min(760px, 100%);
+  max-height: min(820px, 92dvh);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.vault-window > header,
+.vault-preview > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vault-window h2 {
+  margin: 2px 0 0;
+  font: 600 24px var(--serif);
+}
+
+.vault-window header small {
+  color: var(--green-dark);
+  letter-spacing: 1.5px;
+  font-size: 8px;
+}
+
+.vault-window header button,
+.vault-toolbar button,
+.vault-file button,
+.vault-preview button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--surface);
+  font-size: 10px;
+}
+
+.vault-window > header > button {
+  min-width: 38px;
+  font-size: 20px;
+}
+
+.vault-explain {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.vault-toolbar {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.vault-folders {
+  display: grid;
+  gap: 8px;
+}
+
+.vault-folders details {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.vault-folders summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.vault-folders summary span {
+  color: var(--green-dark);
+}
+
+.vault-folders summary small {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.vault-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.vault-file > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.vault-file strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-file small,
+.vault-empty {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.vault-empty {
+  padding: 28px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 11px;
+}
+
+.vault-preview {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.vault-preview pre {
+  max-height: 280px;
+  overflow: auto;
+  margin: 10px 0 0;
+  padding: 10px;
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 11px/1.65 ui-monospace, monospace;
+}
+
+@media (width <= 760px) {
+  .workflow-stages button {
+    min-height: 38px;
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .vault-modal {
+    padding: 0;
+  }
+
+  .vault-window {
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    padding: calc(14px + env(safe-area-inset-top)) 12px
+      calc(14px + env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 0;
+  }
+
+  .vault-file {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .vault-file button {
+    min-width: 52px;
+    min-height: 40px;
+  }
+}

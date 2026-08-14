@@ -25,7 +25,7 @@
       capacitor && typeof capacitor.getPlatform === "function"
         ? capacitor.getPlatform()
         : "web",
-    adapterVersion: "1.1.0",
+    adapterVersion: "1.3.0",
   });
 
   window.AuroraNativeReady = isNative
@@ -53,10 +53,14 @@
       var chatBody = readJsonBody(init && init.body);
       var responsesBody = chatToResponses(chatBody);
       var upstreamUrl = new URL("/responses", requestUrl).href;
+      var useBackground = ["high", "xhigh", "max"].includes(
+        responsesBody.reasoning && responsesBody.reasoning.effort
+      );
+      var backgroundActive = useBackground;
+      var cacheDisabled = false;
       var upstreamInit = Object.assign({}, init, {
         method: "POST",
         headers: copyHeaders(init && init.headers),
-        body: JSON.stringify(responsesBody),
       });
 
       console.info("[AuroraNative] request_start", {
@@ -65,9 +69,93 @@
         stream: false,
       });
 
-      var response = await nativeFetch(upstreamUrl, upstreamInit);
+      var response = await nativeFetch(
+        upstreamUrl,
+        Object.assign({}, upstreamInit, {
+          body: JSON.stringify(
+            backgroundActive
+              ? Object.assign({}, responsesBody, { background: true })
+              : responsesBody
+          ),
+        })
+      );
       var text = await response.text();
       var data = safeJson(text);
+
+      if (
+        useBackground &&
+        !response.ok &&
+        backgroundUnsupported(response.status, data, text)
+      ) {
+        console.info("[AuroraNative] background_fallback", {
+          provider: "tokenclub",
+          status: response.status,
+        });
+        response = await nativeFetch(
+          upstreamUrl,
+          Object.assign({}, upstreamInit, {
+            body: JSON.stringify(responsesBody),
+          })
+        );
+        text = await response.text();
+        data = safeJson(text);
+        backgroundActive = false;
+      }
+
+      if (
+        !response.ok &&
+        unsupportedOption(data, text, "prompt_cache_key")
+      ) {
+        var compatibleBody = Object.assign({}, responsesBody);
+        delete compatibleBody.prompt_cache_key;
+        cacheDisabled = true;
+        if (backgroundActive) compatibleBody.background = true;
+        response = await nativeFetch(
+          upstreamUrl,
+          Object.assign({}, upstreamInit, {
+            body: JSON.stringify(compatibleBody),
+          })
+        );
+        text = await response.text();
+        data = safeJson(text);
+      }
+
+      if (
+        backgroundActive &&
+        !response.ok &&
+        backgroundUnsupported(response.status, data, text)
+      ) {
+        var synchronousBody = Object.assign({}, responsesBody);
+        if (
+          cacheDisabled ||
+          unsupportedOption(data, text, "prompt_cache_key")
+        ) {
+          delete synchronousBody.prompt_cache_key;
+        }
+        response = await nativeFetch(
+          upstreamUrl,
+          Object.assign({}, upstreamInit, {
+            body: JSON.stringify(synchronousBody),
+          })
+        );
+        text = await response.text();
+        data = safeJson(text);
+        backgroundActive = false;
+      }
+
+      if (
+        response.ok &&
+        data &&
+        data.id &&
+        ["queued", "in_progress"].includes(data.status)
+      ) {
+        data = await pollBackgroundResponse(
+          requestUrl,
+          data.id,
+          upstreamInit.headers
+        );
+        text = JSON.stringify(data);
+      }
 
       console.info("[AuroraNative] request_end", {
         provider: "tokenclub",
@@ -156,6 +244,81 @@
     return headers;
   }
 
+  function backgroundUnsupported(status, data, text) {
+    if (![400, 404, 405, 422].includes(Number(status))) return false;
+    var message = String(
+      (data && data.error && data.error.message) ||
+        (data && data.message) ||
+        text ||
+        ""
+    ).toLowerCase();
+    return [404, 405].includes(Number(status)) || message.includes("background");
+  }
+
+  function unsupportedOption(data, text, optionName) {
+    var message = String(
+      (data && data.error && data.error.message) ||
+        (data && data.message) ||
+        text ||
+        ""
+    ).toLowerCase();
+    return message.includes(String(optionName).toLowerCase());
+  }
+
+  async function pollBackgroundResponse(requestUrl, responseId, headers) {
+    var pollUrl = new URL(
+      "/responses/" + encodeURIComponent(responseId),
+      requestUrl
+    ).href;
+    var deadline = Date.now() + 30 * 60 * 1000;
+    var consecutiveFailures = 0;
+
+    while (Date.now() < deadline) {
+      await delay(2500);
+
+      try {
+        var response = await nativeFetch(pollUrl, {
+          method: "GET",
+          headers: copyHeaders(headers),
+        });
+        var text = await response.text();
+        var data = safeJson(text);
+
+        if (!response.ok || !data) {
+          consecutiveFailures += 1;
+          if (consecutiveFailures <= 8) continue;
+          throw new Error(
+            (data && data.error && data.error.message) ||
+              "后台任务查询连续失败，请稍后重试"
+          );
+        }
+
+        consecutiveFailures = 0;
+
+        if (["queued", "in_progress"].includes(data.status)) continue;
+        if (data.status === "completed" || !data.status) return data;
+
+        throw new Error(
+          (data.error && data.error.message) ||
+            "后台任务已结束，但状态为 " +
+              String(data.status || "unknown")
+        );
+      } catch (error) {
+        consecutiveFailures += 1;
+        if (consecutiveFailures <= 8) continue;
+        throw error;
+      }
+    }
+
+    throw new Error("深度思考超过30分钟，任务仍未完成，请降低思考强度后重试");
+  }
+
+  function delay(milliseconds) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, milliseconds);
+    });
+  }
+
   function chatToResponses(chat) {
     if (!chat || !Array.isArray(chat.messages) || chat.messages.length === 0) {
       throw new Error("messages 必须是非空数组");
@@ -213,7 +376,13 @@
       input: input,
       stream: false,
       store: false,
-      reasoning: { effort: "medium" },
+      reasoning: {
+        effort: normalizeReasoningEffort(chat.reasoning_effort),
+      },
+      prompt_cache_key:
+        String(chat.prompt_cache_key || "aurora-core-v2") +
+        ":" +
+        String(chat.model || "gpt-5.6-sol"),
     };
 
     var maxTokens = Number(chat.max_completion_tokens || chat.max_tokens || 0);
@@ -245,6 +414,15 @@
     }
 
     return result;
+  }
+
+  function normalizeReasoningEffort(value) {
+    var effort = String(value || "medium").toLowerCase();
+    return ["none", "low", "medium", "high", "xhigh", "max"].includes(
+      effort
+    )
+      ? effort
+      : "medium";
   }
 
   function convertContent(content, role) {
@@ -367,6 +545,12 @@
 
     var inputTokens = Number(data.usage && data.usage.input_tokens) || 0;
     var outputTokens = Number(data.usage && data.usage.output_tokens) || 0;
+    var cachedTokens =
+      Number(
+        data.usage &&
+          data.usage.input_tokens_details &&
+          data.usage.input_tokens_details.cached_tokens
+      ) || 0;
 
     return {
       id: data.id
@@ -388,12 +572,14 @@
         total_tokens:
           Number(data.usage && data.usage.total_tokens) ||
           inputTokens + outputTokens,
+        prompt_tokens_details: { cached_tokens: cachedTokens },
       },
       proxy_metadata: {
         transport: "native-direct",
         requested_model: requestedModel,
         upstream_reported_model: data.model || null,
         upstream_response_id: data.id || null,
+        cached_input_tokens: cachedTokens,
       },
     };
   }

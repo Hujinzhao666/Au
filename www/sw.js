@@ -1,4 +1,4 @@
-const CACHE = "aurora-shell-v4-attachments";
+const CACHE = "aurora-shell-v7-vault-workflow";
 const APP_ROOT = new URL("./", self.location.href).href;
 self.addEventListener("install", (event) =>
   event.waitUntil(
