@@ -15,8 +15,8 @@
   var capacitor = window.Capacitor;
   var isNative = Boolean(
     capacitor &&
-    typeof capacitor.isNativePlatform === "function" &&
-    capacitor.isNativePlatform()
+      typeof capacitor.isNativePlatform === "function" &&
+      capacitor.isNativePlatform()
   );
 
   window.AuroraNative = Object.freeze({
@@ -25,13 +25,13 @@
       capacitor && typeof capacitor.getPlatform === "function"
         ? capacitor.getPlatform()
         : "web",
-    adapterVersion: "1.0.0"
+    adapterVersion: "1.1.0",
   });
 
   window.AuroraNativeReady = isNative
     ? seedNativeDefaults().catch(function (error) {
         console.warn("[AuroraNative] default_config_failed", {
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
       })
     : Promise.resolve();
@@ -56,13 +56,13 @@
       var upstreamInit = Object.assign({}, init, {
         method: "POST",
         headers: copyHeaders(init && init.headers),
-        body: JSON.stringify(responsesBody)
+        body: JSON.stringify(responsesBody),
       });
 
       console.info("[AuroraNative] request_start", {
         provider: "tokenclub",
         model: responsesBody.model,
-        stream: false
+        stream: false,
       });
 
       var response = await nativeFetch(upstreamUrl, upstreamInit);
@@ -72,24 +72,29 @@
       console.info("[AuroraNative] request_end", {
         provider: "tokenclub",
         status: response.status,
-        duration_ms: Date.now() - startedAt
+        duration_ms: Date.now() - startedAt,
       });
 
       if (!response.ok || !data) {
         return makeResponse(
-          text || JSON.stringify({
-            error: {
-              message: "中转站没有返回有效内容",
-              type: "invalid_upstream_response"
-            }
-          }),
+          text ||
+            JSON.stringify({
+              error: {
+                message: "中转站没有返回有效内容",
+                type: "invalid_upstream_response",
+              },
+            }),
           response.status || 502,
           response.headers
         );
       }
 
       if (Array.isArray(data.choices)) {
-        return makeResponse(JSON.stringify(data), response.status, response.headers);
+        return makeResponse(
+          JSON.stringify(data),
+          response.status,
+          response.headers
+        );
       }
 
       return makeResponse(
@@ -100,14 +105,18 @@
     } catch (error) {
       console.error("[AuroraNative] request_failed", {
         duration_ms: Date.now() - startedAt,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
   };
 
   function shouldConvertTokenClubRequest(url, init) {
-    if (!url || !init || String(init.method || "GET").toUpperCase() !== "POST") {
+    if (
+      !url ||
+      !init ||
+      String(init.method || "GET").toUpperCase() !== "POST"
+    ) {
       return false;
     }
 
@@ -163,12 +172,14 @@
         input.push({
           type: "function_call_output",
           call_id: String(callId),
-          output: stringify(message.content)
+          output: stringify(message.content),
         });
         return;
       }
 
-      var role = ["system", "developer", "user", "assistant"].includes(message.role)
+      var role = ["system", "developer", "user", "assistant"].includes(
+        message.role
+      )
         ? message.role
         : "user";
       var content = convertContent(message.content, role);
@@ -179,14 +190,19 @@
 
       if (role === "assistant" && Array.isArray(message.tool_calls)) {
         message.tool_calls.forEach(function (call) {
-          if (!call || call.type !== "function" || !call.function || !call.function.name) {
+          if (
+            !call ||
+            call.type !== "function" ||
+            !call.function ||
+            !call.function.name
+          ) {
             return;
           }
           input.push({
             type: "function_call",
             call_id: call.id || randomId("call_"),
             name: call.function.name,
-            arguments: String(call.function.arguments || "{}")
+            arguments: String(call.function.arguments || "{}"),
           });
         });
       }
@@ -197,7 +213,7 @@
       input: input,
       stream: false,
       store: false,
-      reasoning: { effort: "medium" }
+      reasoning: { effort: "medium" },
     };
 
     var maxTokens = Number(chat.max_completion_tokens || chat.max_tokens || 0);
@@ -212,8 +228,11 @@
           type: "function",
           name: tool.function.name,
           description: tool.function.description,
-          parameters: tool.function.parameters || { type: "object", properties: {} },
-          strict: tool.function.strict
+          parameters: tool.function.parameters || {
+            type: "object",
+            properties: {},
+          },
+          strict: tool.function.strict,
         });
       });
     }
@@ -233,36 +252,58 @@
     if (content == null) return "";
     if (!Array.isArray(content)) return JSON.stringify(content);
 
-    return content.map(function (part) {
-      if (typeof part === "string") {
-        return {
-          type: role === "assistant" ? "output_text" : "input_text",
-          text: part
-        };
-      }
+    return content
+      .map(function (part) {
+        if (typeof part === "string") {
+          return {
+            type: role === "assistant" ? "output_text" : "input_text",
+            text: part,
+          };
+        }
 
-      if (!part || typeof part !== "object") return null;
+        if (!part || typeof part !== "object") return null;
 
-      if (["text", "input_text", "output_text"].includes(part.type)) {
-        return {
-          type: role === "assistant" ? "output_text" : "input_text",
-          text: String(part.text || "")
-        };
-      }
+        if (["text", "input_text", "output_text"].includes(part.type)) {
+          return {
+            type: role === "assistant" ? "output_text" : "input_text",
+            text: String(part.text || ""),
+          };
+        }
 
-      if (["image_url", "input_image"].includes(part.type)) {
-        var imageUrl =
-          typeof part.image_url === "string" ? part.image_url : part.image_url && part.image_url.url;
-        if (!imageUrl) return null;
-        return compact({
-          type: "input_image",
-          image_url: imageUrl,
-          detail: (part.image_url && part.image_url.detail) || part.detail
-        });
-      }
+        if (["image_url", "input_image"].includes(part.type)) {
+          var imageUrl =
+            typeof part.image_url === "string"
+              ? part.image_url
+              : part.image_url && part.image_url.url;
+          if (!imageUrl) return null;
+          return compact({
+            type: "input_image",
+            image_url: imageUrl,
+            detail: (part.image_url && part.image_url.detail) || part.detail,
+          });
+        }
 
-      return null;
-    }).filter(Boolean);
+        if (["file", "input_file"].includes(part.type)) {
+          var file =
+            part.file && typeof part.file === "object" ? part.file : part;
+          var fileData = file.file_data || part.file_data;
+          var filename = file.filename || part.filename;
+          var fileId = file.file_id || part.file_id;
+          var fileUrl = file.file_url || part.file_url;
+          if (!fileData && !fileId && !fileUrl) return null;
+          return compact({
+            type: "input_file",
+            filename: filename,
+            file_data: fileData,
+            file_id: fileId,
+            file_url: fileUrl,
+            detail: file.detail || part.detail,
+          });
+        }
+
+        return null;
+      })
+      .filter(Boolean);
   }
 
   function responsesToChat(data, requestedModel) {
@@ -278,11 +319,21 @@
 
     (Array.isArray(data.output) ? data.output : []).forEach(function (item) {
       if (item && item.type === "message") {
-        (Array.isArray(item.content) ? item.content : []).forEach(function (part) {
-          if (part && ["output_text", "text"].includes(part.type) && typeof part.text === "string") {
+        (Array.isArray(item.content) ? item.content : []).forEach(function (
+          part
+        ) {
+          if (
+            part &&
+            ["output_text", "text"].includes(part.type) &&
+            typeof part.text === "string"
+          ) {
             textParts.push(part.text);
           }
-          if (part && part.type === "refusal" && typeof part.refusal === "string") {
+          if (
+            part &&
+            part.type === "refusal" &&
+            typeof part.refusal === "string"
+          ) {
             refusals.push(part.refusal);
           }
         });
@@ -297,8 +348,8 @@
             arguments:
               typeof item.arguments === "string"
                 ? item.arguments
-                : JSON.stringify(item.arguments || {})
-          }
+                : JSON.stringify(item.arguments || {}),
+          },
         });
       }
     });
@@ -310,7 +361,7 @@
 
     var message = {
       role: "assistant",
-      content: content || null
+      content: content || null,
     };
     if (toolCalls.length) message.tool_calls = toolCalls;
 
@@ -318,26 +369,32 @@
     var outputTokens = Number(data.usage && data.usage.output_tokens) || 0;
 
     return {
-      id: data.id ? String(data.id).replace(/^resp_/, "chatcmpl_") : randomId("chatcmpl_"),
+      id: data.id
+        ? String(data.id).replace(/^resp_/, "chatcmpl_")
+        : randomId("chatcmpl_"),
       object: "chat.completion",
       created: data.created_at || Math.floor(Date.now() / 1000),
       model: data.model || requestedModel,
-      choices: [{
-        index: 0,
-        message: message,
-        finish_reason: toolCalls.length ? "tool_calls" : "stop"
-      }],
+      choices: [
+        {
+          index: 0,
+          message: message,
+          finish_reason: toolCalls.length ? "tool_calls" : "stop",
+        },
+      ],
       usage: {
         prompt_tokens: inputTokens,
         completion_tokens: outputTokens,
-        total_tokens: Number(data.usage && data.usage.total_tokens) || inputTokens + outputTokens
+        total_tokens:
+          Number(data.usage && data.usage.total_tokens) ||
+          inputTokens + outputTokens,
       },
       proxy_metadata: {
         transport: "native-direct",
         requested_model: requestedModel,
         upstream_reported_model: data.model || null,
-        upstream_response_id: data.id || null
-      }
+        upstream_response_id: data.id || null,
+      },
     };
   }
 
@@ -374,7 +431,9 @@
     if (crypto && typeof crypto.randomUUID === "function") {
       return prefix + crypto.randomUUID();
     }
-    return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    return (
+      prefix + Date.now().toString(36) + Math.random().toString(36).slice(2)
+    );
   }
 
   function seedNativeDefaults() {
@@ -405,18 +464,21 @@
 
         reading.onsuccess = function () {
           if (reading.result == null) {
-            store.put([
-              {
-                id: "gpt",
-                model: "gpt-5.6-sol",
-                baseUrl: "https://tokenclub.info"
-              },
-              {
-                id: "relay",
-                model: "gpt-5.6-sol",
-                baseUrl: "https://tokenclub.info"
-              }
-            ], "providers");
+            store.put(
+              [
+                {
+                  id: "gpt",
+                  model: "gpt-5.6-sol",
+                  baseUrl: "https://tokenclub.info",
+                },
+                {
+                  id: "relay",
+                  model: "gpt-5.6-sol",
+                  baseUrl: "https://tokenclub.info",
+                },
+              ],
+              "providers"
+            );
           }
         };
 
